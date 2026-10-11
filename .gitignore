@@ -1,0 +1,29 @@
+# Secrets and machine-specific config
+local.properties
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+secrets.properties
+.env
+
+# Gradle / Kotlin
+.gradle/
+build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Logs
+*.log

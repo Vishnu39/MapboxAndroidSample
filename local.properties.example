@@ -1,0 +1,11 @@
+# Copy this file to local.properties (git-ignored) and fill in your own values.
+# Android Studio usually writes sdk.dir for you.
+sdk.dir=/path/to/Android/sdk
+
+# Required: a Mapbox *public* access token (starts with pk.).
+# Create one at https://account.mapbox.com/access-tokens/ and add a URL restriction.
+MAPBOX_ACCESS_TOKEN=pk.your_public_token_here
+
+# Optional: a Mapbox *secret* token (starts with sk.) with the DOWNLOADS:READ scope.
+# Only needed if you add the native Mapbox Maps SDK (com.mapbox.maps:android).
+# MAPBOX_DOWNLOADS_TOKEN=sk.your_secret_token_here

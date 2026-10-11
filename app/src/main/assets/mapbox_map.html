@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mapbox DevCon Berlin 2026</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    html, body, #map {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090d16;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* Custom Pulsing Booth Marker */
+    .pulse-marker-container {
+      position: relative;
+      cursor: pointer;
+    }
+    .pulse-ring {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      left: -24px;
+      top: -24px;
+      border-radius: 50%;
+      background: rgba(33, 150, 243, 0.4);
+      animation: pulse 2s infinite ease-out;
+      pointer-events: none;
+    }
+    .pulse-ring-inner {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      left: -16px;
+      top: -16px;
+      border-radius: 50%;
+      background: rgba(0, 230, 118, 0.6);
+      animation: pulse 2s infinite 0.5s ease-out;
+      pointer-events: none;
+    }
+    .marker-pin {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      left: -18px;
+      top: -18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      box-shadow: 0 4px 15px rgba(0, 210, 255, 0.6), 0 0 0 3px #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 14px;
+      transform: scale(1);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .pulse-marker-container:hover .marker-pin,
+    .pulse-marker-container:active .marker-pin {
+      transform: scale(1.15);
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.6);
+        opacity: 0.9;
+      }
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+
+    /* Custom Mapbox Popup styling */
+    .mapboxgl-popup-content {
+      background: rgba(18, 24, 38, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      border-radius: 14px;
+      color: #ffffff;
+      padding: 14px 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      font-size: 13px;
+      max-width: 280px;
+    }
+    .mapboxgl-popup-anchor-top .mapboxgl-popup-tip { border-bottom-color: rgba(18, 24, 38, 0.95); }
+    .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip { border-top-color: rgba(18, 24, 38, 0.95); }
+    .mapboxgl-popup-anchor-left .mapboxgl-popup-tip { border-right-color: rgba(18, 24, 38, 0.95); }
+    .mapboxgl-popup-anchor-right .mapboxgl-popup-tip { border-left-color: rgba(18, 24, 38, 0.95); }
+    
+    .popup-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(90deg, #00d2ff, #0072ff);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+    .popup-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .popup-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .popup-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 8px;
+      font-size: 11px;
+      color: #38bdf8;
+    }
+    .popup-footer span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .dot-green {
+      width: 7px;
+      height: 7px;
+      background: #22c55e;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    /* Floating Status Pill */
+    .status-pill {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 30px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f1f5f9;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      pointer-events: auto;
+    }
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #22c55e;
+      animation: blink 2s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Floating Action Controls on Map */
+    .fab-column {
+      position: absolute;
+      right: 14px;
+      bottom: 24px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .fab-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      font-size: 18px;
+      transition: all 0.2s ease;
+    }
+    .fab-btn:active {
+      transform: scale(0.92);
+      background: rgba(30, 41, 59, 0.95);
+    }
+    .fab-btn.active {
+      background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
+      border-color: #38bdf8;
+      box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
+    }
+
+    /* Style Switcher Bar */
+    .style-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 14px;
+      z-index: 10;
+      display: flex;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 25px;
+      padding: 4px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      max-width: calc(100% - 90px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .style-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .style-chip {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .style-chip.active {
+      background: linear-gradient(135deg, #00d2ff, #0072ff);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 210, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Status Indicator -->
+  <div class="status-pill" onclick="flyToCityCube()">
+    <div class="status-indicator"></div>
+    <span>Booth #8 · CityCube Berlin</span>
+  </div>
+
+  <!-- Floating Right Actions -->
+  <div class="fab-column">
+    <button class="fab-btn" id="btn3d" onclick="toggle3D()" title="Toggle 3D View">3D</button>
+    <button class="fab-btn" id="btnOrbit" onclick="toggleOrbit()" title="Orbit 360 Tour">🔄</button>
+    <button class="fab-btn" onclick="flyToCityCube()" title="Reset to CityCube">📍</button>
+    <button class="fab-btn" onclick="cycleLandmarks()" title="Tour Berlin">🏛️</button>
+  </div>
+
+  <!-- Quick Style Switcher -->
+  <div class="style-bar">
+    <button class="style-chip active" id="chip-standard" onclick="setMapStyle('standard')">Standard</button>
+    <button class="style-chip" id="chip-streets" onclick="setMapStyle('streets-v12')">Streets</button>
+    <button class="style-chip" id="chip-satellite" onclick="setMapStyle('satellite-streets-v12')">Satellite</button>
+    <button class="style-chip" id="chip-dark" onclick="setMapStyle('dark-v11')">Dark</button>
+    <button class="style-chip" id="chip-outdoors" onclick="setMapStyle('outdoors-v12')">Outdoors</button>
+  </div>
+
+  <script>
+    const CITYCUBE_BERLIN = [13.27354, 52.50153];
+    const BRANDENBURG_GATE = [13.37770, 52.51627];
+    const TV_TOWER = [13.40942, 52.52081];
+    const REICHSTAG = [13.37618, 52.51860];
+
+    const landmarks = [
+      { name: "CityCube Berlin (DevCon Booth #8)", coords: CITYCUBE_BERLIN, zoom: 17, pitch: 60, bearing: -20 },
+      { name: "Brandenburg Gate", coords: BRANDENBURG_GATE, zoom: 17, pitch: 65, bearing: 85 },
+      { name: "Berlin TV Tower (Fernsehturm)", coords: TV_TOWER, zoom: 16.5, pitch: 60, bearing: 140 },
+      { name: "Reichstag Building", coords: REICHSTAG, zoom: 17, pitch: 65, bearing: -45 }
+    ];
+    let currentLandmarkIndex = 0;
+
+    // Injected at runtime by MainActivity from BuildConfig.MAPBOX_ACCESS_TOKEN (see README).
+    mapboxgl.accessToken = '__MAPBOX_ACCESS_TOKEN__';
+
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/standard',
+      center: CITYCUBE_BERLIN,
+      zoom: 16.8,
+      pitch: 62,
+      bearing: -24,
+      antialias: true
+    });
+
+    // Add Navigation control (zoom / compass)
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+    // Add Geolocation control
+    map.addControl(
+      new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+        showUserHeading: true
+      }),
+      'top-right'
+    );
+
+    // Create Animated Marker Element
+    const markerEl = document.createElement('div');
+    markerEl.className = 'pulse-marker-container';
+    markerEl.innerHTML = `
+      <div class="pulse-ring"></div>
+      <div class="pulse-ring-inner"></div>
+      <div class="marker-pin">#8</div>
+    `;
+
+    // Create Popup
+    const popupContent = `
+      <div>
+        <div class="popup-badge">🏆 DevCon Berlin 2026</div>
+        <div class="popup-title">Mapbox Booth #8</div>
+        <div class="popup-desc">
+          <b>Next.app DevCon Berlin</b><br/>
+          CityCube Berlin · Oct 7–9, 2026<br/>
+          Mapbox SDK Live Demo · LEGO® Raffle
+        </div>
+        <div class="popup-footer">
+          <span><span class="dot-green"></span> Mapbox SDK Active</span>
+          <span>v3.10.0</span>
+        </div>
+      </div>
+    `;
+
+    const popup = new mapboxgl.Popup({ offset: 25, closeButton: false })
+      .setHTML(popupContent);
+
+    // Add Marker to map
+    const marker = new mapboxgl.Marker({ element: markerEl, anchor: 'center' })
+      .setLngLat(CITYCUBE_BERLIN)
+      .setPopup(popup)
+      .addTo(map);
+
+    // Open popup after map loads
+    map.on('load', () => {
+      popup.addTo(map);
+      add3DBuildings();
+    });
+
+    function add3DBuildings() {
+      // If using styles that support 3d-buildings layer
+      if (!map.getLayer('add-3d-buildings')) {
+        const layers = map.getStyle().layers;
+        const labelLayerId = layers && layers.find(
+          (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
+        )?.id;
+
+        try {
+          map.addLayer(
+            {
+              id: 'add-3d-buildings',
+              source: 'composite',
+              'source-layer': 'building',
+              filter: ['==', 'extrude', 'true'],
+              type: 'fill-extrusion',
+              minzoom: 14,
+              paint: {
+                'fill-extrusion-color': '#aaa',
+                'fill-extrusion-height': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  14.05,
+                  ['get', 'height']
+                ],
+                'fill-extrusion-base': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  14.05,
+                  ['get', 'min_height']
+                ],
+                'fill-extrusion-opacity': 0.75
+              }
+            },
+            labelLayerId
+          );
+        } catch (e) {
+          // Standard style handles 3D buildings natively
+        }
+      }
+    }
+
+    // Camera Controls
+    function flyToCityCube() {
+      stopOrbit();
+      map.flyTo({
+        center: CITYCUBE_BERLIN,
+        zoom: 16.8,
+        pitch: 62,
+        bearing: -24,
+        essential: true,
+        duration: 2500
+      });
+      popup.addTo(map);
+    }
+
+    let is3D = true;
+    function toggle3D() {
+      const btn = document.getElementById('btn3d');
+      if (is3D) {
+        map.easeTo({ pitch: 0, duration: 1000 });
+        is3D = false;
+        btn.classList.remove('active');
+      } else {
+        map.easeTo({ pitch: 65, duration: 1000 });
+        is3D = true;
+        btn.classList.add('active');
+      }
+    }
+
+    function cycleLandmarks() {
+      stopOrbit();
+      currentLandmarkIndex = (currentLandmarkIndex + 1) % landmarks.length;
+      const target = landmarks[currentLandmarkIndex];
+      map.flyTo({
+        center: target.coords,
+        zoom: target.zoom,
+        pitch: target.pitch,
+        bearing: target.bearing,
+        essential: true,
+        duration: 3000
+      });
+      if (target.coords === CITYCUBE_BERLIN) {
+        popup.addTo(map);
+      } else {
+        popup.remove();
+      }
+    }
+
+    // 360 Orbit Demo
+    let isOrbiting = false;
+    let orbitAnimationId = null;
+
+    function toggleOrbit() {
+      if (isOrbiting) {
+        stopOrbit();
+      } else {
+        startOrbit();
+      }
+    }
+
+    function startOrbit() {
+      isOrbiting = true;
+      document.getElementById('btnOrbit').classList.add('active');
+      map.easeTo({ pitch: 65, zoom: 17, duration: 1000 });
+      function rotateCamera(timestamp) {
+        if (!isOrbiting) return;
+        map.rotateTo((map.getBearing() + 0.35) % 360, { duration: 0 });
+        orbitAnimationId = requestAnimationFrame(rotateCamera);
+      }
+      rotateCamera();
+    }
+
+    function stopOrbit() {
+      isOrbiting = false;
+      document.getElementById('btnOrbit').classList.remove('active');
+      if (orbitAnimationId) {
+        cancelAnimationFrame(orbitAnimationId);
+        orbitAnimationId = null;
+      }
+    }
+
+    // Style Switcher
+    function setMapStyle(styleKey) {
+      stopOrbit();
+      document.querySelectorAll('.style-chip').forEach(c => c.classList.remove('active'));
+      const activeBtn = document.getElementById(`chip-${styleKey.split('-')[0]}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const styleUrl = styleKey === 'standard' 
+        ? 'mapbox://styles/mapbox/standard' 
+        : `mapbox://styles/mapbox/${styleKey}`;
+
+      map.setStyle(styleUrl);
+      map.once('style.load', () => {
+        add3DBuildings();
+      });
+    }
+
+    // Stop orbit when user manually interacts
+    map.on('movestart', (e) => {
+      if (e.originalEvent && isOrbiting) {
+        stopOrbit();
+      }
+    });
+  </script>
+</body>
+</html>
